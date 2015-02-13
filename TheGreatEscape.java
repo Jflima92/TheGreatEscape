@@ -16,10 +16,15 @@ class Player {
         int myId = in.nextInt(); // id of my player (0 = 1st player, 1 = 2nd player, ...)
         ArrayList<Map> players = new ArrayList<Map>();  // Array with all the player ingame and their info
         ArrayList<Map> walls = new ArrayList<Map>();  // Array with all the walls ingame and their info
+        ArrayList<State> movesDone = new ArrayList<State>(); 
+        
+        
+        int costSoFar = 0;
         
         // game loop
         while (true) {
             
+            State currentState = new State(myId, 0, 0, costSoFar, walls, players, movesDone, "NULL");
             //Parsing Players
             for (int i = 0; i < playerCount; i++) {
                 int x = in.nextInt(); // x-coordinate of the player
@@ -60,6 +65,8 @@ class Player {
             int myX = (int) players.get(myId).get("x");
             int myY = (int) players.get(myId).get("y");
          
+            currentState.myX = myX;
+            currentState.myY = myY;
          
             //Test insert wall after enemy if enemyPos <= 7
             for(int i = 0; i < playerCount; i++)
@@ -78,332 +85,421 @@ class Player {
                 }
             }
             
-            String action = "RIGHT";
-            for(int i = 0; i < wallCount; i++)
-            {
-                int auxX = (int) walls.get(i).get("x");
-                int auxY = (int) walls.get(i).get("y");
-                String auxOri = (String) walls.get(i).get("ori");
-                
-                if(auxX == myX +1 && (auxY == myY || auxY == myY+1 ))
-                {
-                    if(myY  > 0)
-                    {   
-    
-                        action = "UP";
-                    }
-                    else
-                    action = "DOWN";
-                }
-                /*else if((int) walls.get(i).get("x") == myX +1 && ((int) walls.get(i).get("y") == myX ||(int) walls.get(i).get("y") == myX+1))
-                {
-                    if(myX  > -1)
-                    {
-                        action = "RIGHT";
-                    }
-                    else
-                    action = "LEFT";
-                }*/
-                else
-                {
-                    action = "RIGHT";
-                }
-                
-                
-            }
+            System.err.println("Walls :" + walls); 
             
-            System.err.println("Walls :" + walls);
+            //String move = getGreedyMove(myId, myX, myY, walls);
             
-            String move = getGreedyMove(myId, myX, myY, walls);
-            
-            System.out.println(move);
+           State nextState = AStar(currentState);
+           
+           if((myX - (int)players.get(1).get("x")) >1)
+           {
+               System.out.println((int)players.get(1).get("x")-1 + " " + (int)players.get(1).get("y") + " V");
+           }
+           else
+            System.out.println(nextState.move);
             // Write an action using System.out.println()
             // To debug: System.err.println("Debug messages...");
-
-           // action: LEFT, RIGHT, UP, DOWN or "putX putY putOrientation" to place a wall
             
+           // action: LEFT, RIGHT, UP, DOWN or "putX putY putOrientation" to place a wall
+           
+           currentState = (State) nextState.clone();
+           costSoFar = currentState.costSoFar-1;
+           movesDone.add(currentState);
+           
            players.clear(); 
         }
         
     }
     
-    
-    public static String getGreedyMove(int myId, int myX, int myY, ArrayList<Map> walls)
+    public String getBestAction(State currentState)
     {
-        String toDo = null;
-        
-        int currentDist = calculateStraightDistance(myId, myX, myY);
-        
-        
-        ArrayList<Integer> Values = new ArrayList<Integer>();
-        
-        int Right = costOfMoving("RIGHT", myId,  myX, myY, walls);
-        int Left = 2*costOfMoving("LEFT", myId,  myX, myY, walls);
-        int Up = costOfMoving("UP", myId,  myX, myY, walls);
-        int Down = costOfMoving("DOWN", myId,  myX, myY, walls);
-        
-        Values.add(Right); // i = 0
-        Values.add(Left);
-        Values.add(Up);
-        Values.add(Down); // i = 3
-        
-        int leastValue = 1000;
-        int lesserI = 0;
-        
-        if(myId == 0)
+       return null; 
+    }
+    
+    public static ArrayList<State> generatePossibleValidStates(State currentState)
         {
-            if(Right == -1)
-            {
-                toDo = "RIGHT";
+            ArrayList<State> states = new ArrayList<State>();
+            int costSoFar = currentState.getG();
+            int myId = currentState.myId;
+            int myX = currentState.myX;
+            int myY = currentState.myY;
+            ArrayList<State> movesDone = currentState.movesDone;
+            ArrayList<Map> walls = currentState.walls;
+            ArrayList<Map> players = currentState.players;
+            
+            State state1 = new State(myId, myX+1, myY, costSoFar, walls, players,  movesDone, "RIGHT");
+            State state2 = new State(myId, myX-1, myY, costSoFar, walls, players,  movesDone, "LEFT");
+            State state3 = new State(myId, myX, myY-1, costSoFar, walls, players,  movesDone, "UP");
+            State state4 = new State(myId, myX, myY+1, costSoFar, walls, players,  movesDone, "DOWN");
+            
+            
+            if(state1.isValidState() && !currentState.move.equals("LEFT"))
+            {   
+                states.add(state1);
             }
             else
             {
-                for(int i = 0; i < Values.size(); i++)
-                {
-                    if(Values.get(i) < leastValue)
-                    {
-                        leastValue = Values.get(i);
-                        lesserI = i;
-                    }
-                }
-                
-                if(lesserI == 0)
-                {
-                    toDo = "RIGHT";
-                }
-                else if(lesserI == 1)
-                {
-                    toDo = "LEFT";
-                }
-                else if(lesserI == 2)
-                {
-                    toDo = "UP";
-                }
-                else if(lesserI == 3)
-                {
-                    toDo = "DOWN";
-                }
-                
+                System.err.println("State1 not valid");
             }
             
+            if(state2.isValidState() && !currentState.move.equals("RIGHT"))
+            states.add(state2);
+            else
+            {
+                System.err.println("State2 not valid");
+            }
+            
+            if(state3.isValidState() && !currentState.move.equals("DOWN"))
+            states.add(state3);
+            else
+            {
+                System.err.println("State3 not valid");
+            }
+            
+            if(state4.isValidState() && !currentState.move.equals("UP"))
+            states.add(state4);
+            else
+            {
+                System.err.println("State4 not valid");
+            }
+            
+            return states;
+            
         }
-        
-        return toDo;
-    }
     
-    public static int calculateStraightDistance(int myId, int myX, int myY)
+        
+    public static State AStar(State currentState)
     {
-        int dist = 0;
-        
-        if(myId == 0)
-        {
-            dist = 8 - myX;
-        }
-        else if(myId == 1)
-        {
-            dist = myX;
-        }
-        else if(myId == 2)
-        {
-            dist = 8 - myX;
-        }
-        
-        return dist;
-    }
-    
-    public static int wallsInPathPenalty(int myId, int myX,int myY, ArrayList<Map> walls) //- -1 if no walls in the path, 0-n being distance from wall to current pos
-    {
-        int penalty = 0;
-        
-        if(myX < 0)
-        {
-            penalty += 1000;
-        }
-        else if(myX > 9)
-        {
-            penalty += 1000;
-        }
-        else if(myY < 0)
-        {
-            penalty += 1000;
-        }
-        else if(myY > 9)
-        {
-            penalty += 1000;
-        }
-        
-        if(!walls.isEmpty())
-        {
-            for(int i = 0; i < walls.size(); i++)
-            {   
-                
-                int wallX = (int) walls.get(i).get("x");
-                int wallY = (int) walls.get(i).get("y");
-                String ori = (String) walls.get(i).get("ori");
-                if(myId == 0)
-                {
-                    if(ori.equals("V"))
-                    {
-                        if(myY == wallY || myY == wallY+1)  //Same row
-                        {   
-                            int dist = 10 - (wallX - myX);
-                            System.err.println("Dist: " + dist);
-                            if(dist > 0)  //On the right side, worse for player 0
-                            {
-                                penalty += dist;
-                            }
-                            else if(dist < 0) // on the left side, not to bad for player 0
-                            {
-                                
-                            }
-                        }
-                    }
-                    else if(ori == "H")         // CHECK AGAIN
-                    {
-                        if(myX == wallX || myX == wallX+1)
-                        {
-                            int dist = 10 - (wallX - myX);
-                            
-                            if(dist > 0)  //On the right side, worse for player 0
-                            {
-                                penalty += dist*0.5;
-                            }
-                            else if(dist < 0) // on the left side, not to bad for player 0
-                            {
-                                
-                            }
-                        }
-                    }
-                }
-                
-                else if(myId == 1)
-                {
-                    if(ori == "V")
-                    {
-                        if(myY == wallY || myY == wallY+1)  //Same row
-                        {
-                            int dist = 10 - (wallX - myX);
-                            
-                            if(dist < 0)  //On the right side, worse for player 0
-                            {
-                                penalty += dist;
-                            }
-                            else if(dist > 0) // on the left side, not to bad for player 0
-                            {
-                                
-                            }
-                        }
-                    }
-                    else if(ori == "H")
-                    {
-                        if(myX == wallX || myX == wallX+1)
-                        {
-                            int dist = 10 - (wallX - myX);
-                            
-                            if(dist > 0)  //On the right side, worse for player 0
-                            {
-                                penalty += dist*0.5;
-                            }
-                            else if(dist < 0) // on the left side, not to bad for player 0
-                            {
-                                
-                            }
-                        }
-                    }
-                }
-                
-                else if(myId == 2)
-                {
-                    if(ori == "V")
-                    {
-                        if(myY == wallY || myY == wallY+1)  //Same row
-                        {
-                            int dist = 10 - (wallX - myX);
-                            
-                            if(dist < 0)  //On the right side, worse for player 0
-                            {
-                                penalty += dist*0.5;
-                            }
-                            else if(dist > 0) // on the left side, not to bad for player 0
-                            {
-                                
-                            }
-                        }
-                    }
-                    else if(ori == "H")
-                    {
-                        if(myX == wallX || myX == wallX+1)
-                        {
-                            int dist = 10 - (wallX - myX);
-                            
-                            if(dist > 0)  //On the right side, worse for player 0
-                            {
-                                penalty += dist;
-                            }
-                            else if(dist < 0) // on the left side, not to bad for player 0
-                            {
-                                
-                            }
-                        }
-                    }
-                }
-                
-                
+        PriorityQueue<State> open = new PriorityQueue<State>(10, new Comparator<State>() {
+            public int compare(State state1, State state2) {
+                   return state1.getF() < state2.getF() ? -1 : state1.getF() == state2.getF() ? 0 : 1;
             }
-        }
-        else
-        {
-            penalty = -1;
-        }
+        });
         
-        return penalty;
-    }
-    
-    public static int costOfMoving(String where, int myId, int myX,int myY, ArrayList<Map> walls)
-        {
-            int penalty = 0;
-            if(where.equals("RIGHT"))
+        ArrayList<State> path1 = new ArrayList<State>();
+        Stack path = new Stack();
+        ArrayList<State> closed = new ArrayList<State>();
+        State chosen = currentState.clone();
+       
+       closed.clear();
+       open.clear();
+       
+        open.add(currentState);
+        int i = 0;
+        while(!open.isEmpty())
+        {   
+            State current = open.poll();
+            System.err.println("Chosen state at " + i + " iteration: " + current.move + " to " + current.myX + ", " + current.myY + " With f value = " + current.getF() + ", G = " + current.getG() + " and H = " + current.getHeuristics());
+            System.err.println(i + " iteration: " + open.size());
+            i++;
+            
+            if(current.calculateStraightDistance() == 0)
             {
-                penalty = wallsInPathPenalty(myId, myX+1, myY,  walls);
-                
+              path = getOptimalPath(current);
+              System.err.println("Size of path: " + path.size());
+              ArrayList<String> pathx = new ArrayList<String>();
+              System.err.println(pathx);
+              
+              chosen = (State) path.pop();
+              break;
             }
-            else if(where.equals("LEFT"))
+            
+            closed.add(current);
+            
+            ArrayList<State> generatedStates = new ArrayList<State>();
+            generatedStates = generatePossibleValidStates(current);
+            
+            
+            System.err.println("Generated States Size: " + generatedStates.size());
+            
+            for(int u = 0; u < generatedStates.size(); u++)
             {
-                penalty = wallsInPathPenalty(myId, myX-1, myY,  walls);
                 
-            }
-            else if(where.equals("UP"))
-            {
-                penalty = wallsInPathPenalty(myId, myX, myY-1,  walls);
-                
-            }
-            else if(where.equals("DOWN"))
-            {
-                penalty = wallsInPathPenalty(myId, myX, myY-1,  walls);
+                State next = generatedStates.get(u);
                
+                if(closed.contains(next))
+                {
+                   continue;
+                }
+                
+                int newCost = current.costSoFar + 1; 
+            
+                if(!(open.contains(next)) && !next.visited)
+                {
+                    next.parent = current;
+                    next.costSoFar = newCost;
+                    open.add(next);
+                    
+                }
+                
+                next.visited = true;
             }
             
-            return penalty;
         }
+        return chosen;
+    }
     
-    public class State
+    public static Stack getOptimalPath(State Goal)
     {
-        public ArrayList<Map> players = new ArrayList<Map>();  // Array with all the player ingame and their info
-        public ArrayList<Map> walls = new ArrayList<Map>();
+        Stack st = new Stack();
+        st.push(Goal);
+        State Parent = (State) Goal.parent.clone();
         
-        int myId, myX, myY;
+       while(Parent.parent!=null)
+       {
+           st.push(Parent);
+           Parent = (State) Parent.parent.clone();
+       }
+       
+       return st;
+    }
+    
+    public static class State extends CloneableObject 
+    {
+        public ArrayList<Map> players;  // Array with all the player ingame and their info
+        public ArrayList<Map> walls;
+        public ArrayList<State> movesDone;
+        public State parent;
         
-        public State(int myId, int myX, int myY, ArrayList<Map> walls, ArrayList<Map> players)
+        public int costSoFar;
+        
+        
+        public int myId, myX, myY;
+        
+        public String move;
+        public boolean visited;
+        
+        
+        public State(int myId, int myX, int myY, int costSoFar, ArrayList<Map> walls, ArrayList<Map> players, ArrayList<State> movesDone, String move)
         {
             this.myId = myId;
             this.myX = myX;
             this.myY = myY;
+            this.costSoFar = costSoFar;
             this.walls = walls;
+            this.visited = false;
+            this.parent = null;
             this.players = players;
+            this.movesDone = movesDone;
+            this.move = move;
         }
         
+        public boolean isValidState()
+        {
+            boolean valid = true;
+            
+            for(int i = 0; i < walls.size(); i++)
+            {
+                int wallX = (int) walls.get(i).get("x");
+                int wallY = (int) walls.get(i).get("y");
+                
+                
+                if(isInsideBorders())
+                {
+                    if(move.equals("RIGHT") || move.equals("LEFT"))
+                    {
+                        if(wallX == myX && wallY == myY)
+                        {
+                           return false;
+                        }
+                        else if(wallX == myX && wallY+1 == myY)
+                        {
+                            return false;
+                        }
+                    }
+                    else if(move.equals("DOWN") || move.equals("UP"))
+                    {
+                        if(wallX == myX && wallY == myY)
+                        {
+                           return false;
+                        }
+                        else if(wallX + 1  == myX && wallY == myY)
+                        {
+                            return false;
+                        }
+                    }
+                    
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        public boolean isInsideBorders()
+        {
+            
+            
+            if(myId == 0)
+            {
+                if(myX < 0)
+                {
+                    return false;
+                }
+                else if(myY > 8)
+                {
+                    return false;
+                }
+                else if(myY < 0)
+                {
+                    return false;
+                }
+            }
+            
+            else if(myId == 1)
+            {
+                if(myX > 8)
+                {
+                    return false;
+                }
+                else if(myY > 8)
+                {
+                    return false;
+                }
+                else if(myY < 0)
+                {
+                    return false;
+                }
+            }
+            
+            else if(myId == 2)
+            {
+                if(myX > 8)
+                {
+                    return false;
+                }
+                else if(myX < 0)
+                {
+                    return false;
+                }
+                else if(myY < 0)
+                {
+                    return false;
+                }
+            }
+            
+            return true;    
+        }
+        
+        public int getG()
+        {
+           return costSoFar; 
+        } 
+        
+        public void setG(int g)
+        {
+            this.costSoFar = g;
+        }
+        
+        public int getHeuristics()  //ERROR IS HERE
+        {
+            int H = calculateStraightDistance();
+            
+            if(myId == 0)
+            {
+                if(move.equals("RIGHT"))
+                {
+                    H += 1;
+                }
+                else if(move.equals("LEFT"))
+                {
+                    H += 4;
+                }
+                else if(move.equals("UP"))
+                {
+                    H += 2;
+                }
+                else if(move.equals("DOWN"))
+                {
+                    H += 3;
+                }
+            }
+            
+            else if(myId == 1)
+            {
+                if(move.equals("RIGHT"))
+                {
+                    H += 4;
+                }
+                else if(move.equals("LEFT"))
+                {
+                    H += 1;
+                }
+                else if(move.equals("UP"))
+                {
+                    H += 2;
+                }
+                else if(move.equals("DOWN"))
+                {
+                    H += 3;
+                }
+            }
+            
+            else if(myId == 2)
+            {
+                if(move.equals("RIGHT"))
+                {
+                    H += 3;
+                }
+                else if(move.equals("LEFT"))
+                {
+                    H += 2;
+                }
+                else if(move.equals("UP"))
+                {
+                    H += 4;
+                }
+                else if(move.equals("DOWN"))
+                {
+                    H += 1;
+                }
+            }
+            
+            return H;
+        }
+        
+        public int calculateStraightDistance()
+        {
+            int dist = 0;
+            
+            if(myId == 0)
+            {
+                dist = 8 - myX;
+            }
+            else if(myId == 1)
+            {
+                dist = myX;
+            }
+            else if(myId == 2)
+            {
+                dist = 8 - myX;
+            }
+            
+            return dist;
+        }
+        
+        public int getF()
+        {
+            return getG() + getHeuristics();
+        }
+        
+        public State clone() {
+            return (State) super.clone();
+        }
         
     }
     
-    
+    public static class CloneableObject implements Cloneable {
+        public CloneableObject clone() {
+            try {
+                return (CloneableObject)super.clone();
+            } catch (CloneNotSupportedException err) {
+                
+                return null;
+            }
+        }
+    }
 }
